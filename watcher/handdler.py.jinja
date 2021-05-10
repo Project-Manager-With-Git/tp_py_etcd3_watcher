@@ -1,0 +1,17 @@
+from etcd3 import EventType
+from etcd3.stateful.watch import Event
+from pyloggerhelper import log
+
+
+def handdler(e: Event) -> None:
+    try:
+        if e.type == EventType.PUT:
+            key = e.key.decode("utf-8")
+            value = e.value.decode("utf-8")
+            log.info("get put event", key=key, value=value)
+
+        elif e.type == EventType.DELETE:
+            key = e.key.decode("utf-8")
+            log.info("get delete event", key=key)
+    except Exception as e:
+        log.error("event watch error", e=e)

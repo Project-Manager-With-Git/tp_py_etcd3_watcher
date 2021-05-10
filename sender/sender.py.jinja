@@ -1,0 +1,65 @@
+from urllib.parse import urlparse, ParseResult, parse_qsl
+from typing import Dict, Any, Union, Tuple
+from pyloggerhelper import log
+from pyproxypattern import Proxy
+from etcd3 import Client, AioClient
+
+
+def etcdurl_parser(url: str) -> Dict[str, Union[str, int]]:
+    keys = ["timeout", "headers", "user_agent", "pool_size", "token", "server_version", "cluster_version"]
+    intkeys = ["timeout", "pool_size"]
+    result: Dict[str, Union[str, int]] = {
+        "host": '127.0.0.1',
+        "port": 2379,
+        "protocol": 'http'
+    }
+    parse_result = urlparse(url)
+    if parse_result.scheme.lower() != "etcd":
+        raise AttributeError("schema 必须未etcd")
+    if parse_result.username:
+        result.update({"username": parse_result.username})
+    if parse_result.password:
+        result.update({"password": parse_result.password})
+    if parse_result.port:
+        result.update({"port": parse_result.port})
+    if parse_result.hostname:
+        result.update({"host": parse_result.hostname})
+    if parse_result.query:
+        sql_result = dict(parse_qsl(parse_result.query))
+        for k, v in sql_result.items():
+            if k in keys:
+                if k in intkeys:
+                    result.update({k: int(v)})
+                else:
+                    result.update({k: v})
+    return result
+
+
+class EtcdSender(Proxy):
+    @classmethod
+    def create(clz, aio: bool = False, **configs: Any) -> "EtcdSender":
+        """初始化创建一个监听对象.
+        参数参考<https://kafka-python.readthedocs.io/en/master/apidoc/KafkaProducer.html>
+        """
+        if aio:
+            c = AioClient(**configs)
+        else:
+            c = Client(**configs)
+        p = clz(c)
+        return p
+
+    @classmethod
+    def create_from_url(clz, url: str, *, aio: bool = False, cert: Tuple = (), verify: bool = False) -> "EtcdSender":
+        """初始化创建一个监听对象.
+        参数参考<https://kafka-python.readthedocs.io/en/master/apidoc/KafkaProducer.html>
+        """
+        configs = etcdurl_parser(url)
+        if aio:
+            c = AioClient(cert=cert, verify=verify, **configs)
+        else:
+            c = Client(cert=cert, verify=verify, **configs)
+        p = clz(c)
+        return p
+
+    def _instance_check(self, instance: Any) -> bool:
+        return isinstance(instance, (Client, AioClient))

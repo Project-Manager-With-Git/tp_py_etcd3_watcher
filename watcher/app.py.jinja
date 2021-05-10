@@ -1,0 +1,84 @@
+import os
+import time
+from pathlib import Path
+from typing import Dict, Union
+from etcd3 import Client
+from schema_entry import EntryPoint
+from pyloggerhelper import log
+from watcher import EtcdWatcher, etcdurl_parser
+from handdler import handdler
+
+
+class Application(EntryPoint):
+    _name = "{{ app_name }}_watcher"
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "required": [
+            "app_version",
+            "app_name",
+            "log_level",
+            "watch_etcd_url",
+            "watch_etcd_key",
+        ],
+        "properties": {
+            "app_version": {
+                "type": "string",
+                "title": "v",
+                "description": "应用版本",
+                "default": "0.0.0"
+            },
+            "app_name": {
+                "type": "string",
+                "title": "n",
+                "description": "应用名",
+                "default": "{{ app_name }}_watcher"
+            },
+            "log_level": {
+                "type": "string",
+                "title": "l",
+                "description": "log等级",
+                "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
+                "default": "DEBUG"
+            },
+            "watch_etcd_url": {
+                "type": "string",
+                "title": "u",
+                "description": "监听的etcd实例地址",
+
+            },
+            "watch_etcd_key": {
+                "type": "string",
+                "title": "g",
+                "description": "监听的etcd的键"
+            },
+            "watch_etcd_prefix": {
+                "type": "boolean",
+                "title": "p",
+                "description": "监听的键是一个前缀而不是以一个完整的键",
+                "default": False
+            },
+        }
+    }
+
+    def do_main(self) -> None:
+        log.initialize_for_app(
+            app_name=self.config.get("app_name"),
+            log_level=self.config.get("log_level")
+        )
+        log.info("获取任务配置", config=self.config)
+        watch_etcd_url = self.config["watch_etcd_url"]
+        watch_etcd_key = self.config["watch_etcd_key"]
+        watch_etcd_prefix = self.config["watch_etcd_prefix"]
+        c = Client(**etcdurl_parser(watch_etcd_url))
+        watcher = EtcdWatcher.create(client=c, key=watch_etcd_key, progress_notify=True, prev_kv=True, prefix=watch_etcd_prefix)
+        watcher.onEvent(handdler)
+        try:
+            watcher.run()
+        except (KeyboardInterrupt, SystemExit):
+            log.info('kafka watcher stoped')
+        except Exception as e:
+            log.error("kafka watcher get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
+        finally:
+            watcher.stop()
+            c.close()

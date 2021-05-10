@@ -1,0 +1,69 @@
+import os
+import time
+from pathlib import Path
+from typing import Dict, Union
+from schema_entry import EntryPoint
+from pyloggerhelper import log
+# from watchdog.observers.polling import PollingObserver as Observer # 如果在docker中部署可以用PollingObserver
+from sender import EtcdSender
+
+
+class Application(EntryPoint):
+    _name = "{{ app_name }}_sender"
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "required": [
+            "app_version",
+            "app_name",
+            "log_level",
+            "send_etcd_url",
+        ],
+        "properties": {
+            "app_version": {
+                "type": "string",
+                "title": "v",
+                "description": "应用版本",
+                "default": "0.0.0"
+            },
+            "app_name": {
+                "type": "string",
+                "title": "n",
+                "description": "应用名",
+                "default": "{{ app_name }}_sender"
+            },
+            "log_level": {
+                "type": "string",
+                "title": "l",
+                "description": "log等级",
+                "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
+                "default": "DEBUG"
+            },
+            "send_etcd_url": {
+                "type": "string",
+                "title": "u",
+                "description": "监听etcd节点地址"
+            },
+        }
+    }
+
+    def do_main(self) -> None:
+        log.initialize_for_app(
+            app_name=self.config.get("app_name"),
+            log_level=self.config.get("log_level")
+        )
+        log.info("获取任务配置", config=self.config)
+        send_etcd_url = self.config["send_etcd_url"]
+        sender = EtcdSender.create_from_url(url=send_etcd_url)
+        try:
+            for i in range(10):
+                sender.put('/test/foo', f'bar{i}')
+                log.info("send msg", value=f'bar{i}', key="foo")
+                time.sleep(1)
+            sender.delete_range("/test", prefix=True)
+        except (KeyboardInterrupt, SystemExit):
+            log.info('etcd sender stoped')
+        except Exception as e:
+            log.error("etcd sender get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
+        finally:
+            sender.close()
