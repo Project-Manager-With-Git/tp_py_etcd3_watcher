@@ -1,13 +1,7 @@
-import os
-import time
-from pathlib import Path
-from typing import Dict, Union
-from etcd3 import Client
 from schema_entry import EntryPoint
 from pyloggerhelper import log
-from watcher import EtcdWatcher, etcdurl_parser
-from handdler import handdler
 
+from .watcher import etcd, handdler, aiohanddler
 
 class Application(EntryPoint):
     _name = "{{ app_name }}_watcher"
@@ -60,6 +54,35 @@ class Application(EntryPoint):
             },
         }
     }
+    def run_handdler(watch_etcd_prefix:bool, watch_etcd_key:str)->None:
+        if watch_etcd_prefix:
+            events_iterator, cancel = etcd.watch_prefix(watch_etcd_key)
+        else:
+            events_iterator, cancel = etcd.watch(watch_etcd_key)
+        try:
+            handdler(events_iterator)
+        except (KeyboardInterrupt, SystemExit):
+            log.info('kafka watcher stoped')
+        except Exception as e:
+            log.error("kafka watcher get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
+        finally:
+            cancel()
+            etcd.close()
+
+    async def run_aiohanddler(watch_etcd_prefix:bool, watch_etcd_key:str)->None:
+        if watch_etcd_prefix:
+            events_iterator, cancel = await etcd.watch_prefix(watch_etcd_key)
+        else:
+            events_iterator, cancel = await etcd.watch(watch_etcd_key)
+        try:
+            await aiohanddler(events_iterator)
+        except (KeyboardInterrupt, SystemExit):
+            log.info('kafka watcher stoped')
+        except Exception as e:
+            log.error("kafka watcher get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
+        finally:
+            await cancel()
+            await etcd.close()
 
     def do_main(self) -> None:
         log.initialize_for_app(
@@ -70,15 +93,9 @@ class Application(EntryPoint):
         watch_etcd_url = self.config["watch_etcd_url"]
         watch_etcd_key = self.config["watch_etcd_key"]
         watch_etcd_prefix = self.config["watch_etcd_prefix"]
-        c = Client(**etcdurl_parser(watch_etcd_url))
-        watcher = EtcdWatcher.create(client=c, key=watch_etcd_key, progress_notify=True, prev_kv=True, prefix=watch_etcd_prefix)
-        watcher.onEvent(handdler)
-        try:
-            watcher.run()
-        except (KeyboardInterrupt, SystemExit):
-            log.info('kafka watcher stoped')
-        except Exception as e:
-            log.error("kafka watcher get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
-        finally:
-            watcher.stop()
-            c.close()
+        etcd.initialize_from_url(url=watch_etcd_url)
+        if etcd.aio:
+            import asyncio
+            asyncio.run(run_aiohanddler(watch_etcd_prefix, watch_etcd_key))
+        else:
+            run_handdler(watch_etcd_prefix, watch_etcd_key)

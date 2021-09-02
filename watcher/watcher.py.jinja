@@ -1,66 +1,36 @@
-from urllib.parse import urlparse, ParseResult, parse_qsl
-from typing import Dict, Any, Union, Optional
+from typing import Iterator, AsyncIterator
 from pyloggerhelper import log
-from pyproxypattern import Proxy
-from etcd3 import Watcher, BaseClient
+from etcd3.etcd3 import PutEvent, DeleteEvent
+from etcdproxy import EtcdProxy
+
+etcd = EtcdProxy()
 
 
-def etcdurl_parser(url: str) -> Dict[str, Union[str, int]]:
-    keys = ["timeout", "headers", "user_agent", "pool_size", "token", "server_version", "cluster_version"]
-    intkeys = ["timeout", "pool_size"]
-    result: Dict[str, Union[str, int]] = {
-        "host": '127.0.0.1',
-        "port": 2379,
-        "protocol": 'http'
-    }
-    parse_result = urlparse(url)
-    if parse_result.scheme.lower() != "etcd":
-        raise AttributeError("schema 必须未etcd")
-    if parse_result.username:
-        result.update({"username": parse_result.username})
-    if parse_result.password:
-        result.update({"password": parse_result.password})
-    if parse_result.port:
-        result.update({"port": parse_result.port})
-    if parse_result.hostname:
-        result.update({"host": parse_result.hostname})
-    if parse_result.query:
-        sql_result = dict(parse_qsl(parse_result.query))
-        for k, v in sql_result.items():
-            if k in keys:
-                if k in intkeys:
-                    result.update({k: int(v)})
-                else:
-                    result.update({k: v})
-    return result
+def handdler(events_iterator: Iterator) -> None:
 
+    for event in events_iterator:
+        try:
+            if isinstance(event, PutEvent):
+                key = event.kv.key.decode("utf-8")
+                value = event.kv.value.decode("utf-8")
+                log.info("get put event", key=key, value=value)
 
-class EtcdWatcher(Proxy):
-    @classmethod
-    def create(clz, client: BaseClient,
-               key: Optional[str] = None,
-               range_end: Optional[str] = None,
-               max_retries: int = -1,
-               start_revision: Optional[int] = None,
-               progress_notify: Optional[bool] = None,
-               prev_kv: Optional[bool] = None,
-               prefix: Optional[bool] = None,
-               all_: Optional[bool] = None,
-               no_put: bool = False,
-               no_delete: bool = False) -> "EtcdWatcher":
-        """初始化创建一个监听对象."""
-        c = client.Watcher(key=key,
-                           range_end=range_end,
-                           max_retries=max_retries,
-                           start_revision=start_revision,
-                           progress_notify=progress_notify,
-                           prev_kv=prev_kv,
-                           prefix=prefix,
-                           all=all_,
-                           no_put=no_put,
-                           no_delete=no_delete)
-        p = clz(c)
-        return p
+            elif isinstance(event, DeleteEvent):
+                key = event.kv.key.decode("utf-8")
+                log.info("get delete event", key=key)
+        except Exception as e:
+            log.error("event watch error", e=e)
 
-    def _instance_check(self, instance: Any) -> bool:
-        return isinstance(instance, Watcher)
+async def aiohanddler(events_iterator: AsyncIterator) -> None:
+    async for event in events_iterator:
+        try:
+            if isinstance(event, PutEvent):
+                key = event.kv.key.decode("utf-8")
+                value = event.kv.value.decode("utf-8")
+                log.info("get put event", key=key, value=value)
+
+            elif isinstance(event, DeleteEvent):
+                key = event.kv.key.decode("utf-8")
+                log.info("get delete event", key=key)
+        except Exception as e:
+            log.error("event watch error", e=e)

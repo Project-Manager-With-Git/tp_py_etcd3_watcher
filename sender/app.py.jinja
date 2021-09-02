@@ -1,12 +1,6 @@
-import os
-import time
-from pathlib import Path
-from typing import Dict, Union
 from schema_entry import EntryPoint
 from pyloggerhelper import log
-# from watchdog.observers.polling import PollingObserver as Observer # 如果在docker中部署可以用PollingObserver
-from sender import EtcdSender
-
+from .sender import etcd, handdler, aiohanddler
 
 class Application(EntryPoint):
     _name = "{{ app_name }}_sender"
@@ -47,6 +41,26 @@ class Application(EntryPoint):
         }
     }
 
+    def run_handdler()->None:
+        try:
+            handdler()
+        except (KeyboardInterrupt, SystemExit):
+            log.info('etcd sender stoped')
+        except Exception as e:
+            log.error("etcd sender get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
+        finally:
+            etcd.close()
+
+    async run_aiohanddler() -> None:
+        try:
+            await aiohanddler()
+        except (KeyboardInterrupt, SystemExit):
+            log.info('etcd sender stoped')
+        except Exception as e:
+            log.error("etcd sender get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
+        finally:
+            await etcd.close()
+
     def do_main(self) -> None:
         log.initialize_for_app(
             app_name=self.config.get("app_name"),
@@ -54,16 +68,9 @@ class Application(EntryPoint):
         )
         log.info("获取任务配置", config=self.config)
         send_etcd_url = self.config["send_etcd_url"]
-        sender = EtcdSender.create_from_url(url=send_etcd_url)
-        try:
-            for i in range(10):
-                sender.put('/test/foo', f'bar{i}')
-                log.info("send msg", value=f'bar{i}', key="foo")
-                time.sleep(1)
-            sender.delete_range("/test", prefix=True)
-        except (KeyboardInterrupt, SystemExit):
-            log.info('etcd sender stoped')
-        except Exception as e:
-            log.error("etcd sender get error", err=type(e), err_msg=str(e), exc_info=True, stack_info=True)
-        finally:
-            sender.close()
+        etcd.initialize_from_url(url=send_etcd_url)
+        if etcd.aio:
+            import asyncio
+            asyncio.run(run_aiohanddler())
+        else:
+            run_handdler()

@@ -23,40 +23,15 @@
         }
     },
     "components": {
-        "watcher_app": {
-            "source": "watcher/app.py.jinja",
-            "description": "监听应用主体",
-            "default_path": "{{ project_name }}_watcher/app.py"
-        },
         "watcher": {
-            "source": "watcher/watcher.py.jinja",
-            "description": "消费者对象的代理",
-            "default_path": "{{ project_name }}_watcher/watcher.py"
-        },
-        "watcher_main": {
-            "source": "watcher/__main__.py.jinja",
-            "description": "监听应用入口",
-            "default_path": "{{ project_name }}_watcher/__main__.py"
-        },
-        "watcher_handdler": {
-            "source": "watcher/handdler.py.jinja",
-            "description": "消息的处理函数",
-            "default_path": "{{ project_name }}_watcher/handdler.py"
-        },
-        "sender_app": {
-            "source": "sender/app.py.jinja",
-            "description": "发送端应用主体",
-            "default_path": "{{ project_name }}_sender/app.py"
+            "source": "watcher",
+            "description": "监听应用主体",
+            "default_path": "{{ project_name }}_watcher"
         },
         "sender": {
-            "source": "sender/sender.py.jinja",
-            "description": "生产者对象的代理",
-            "default_path": "{{ project_name }}_sender/sender.py"
-        },
-        "sender_main": {
-            "source": "sender/__main__.py.jinja",
-            "description": "发送端应用入口",
-            "default_path": "{{ project_name }}_sender/__main__.py"
+            "source": "sender",
+            "description": "发送端应用主体",
+            "default_path": "{{ project_name }}_sender"
         },
         "dockerfile": {
             "source": "dockerfile.jinja",
@@ -64,7 +39,7 @@
             "default_path": "dockerfile"
         },
         "dockercompose": {
-            "source": "cp_dockercompose//etcd_broker_standalone",
+            "source": "cp_dockercompose@v0.0.1//etcd_broker_standalone",
             "description": "用于测试程序的docker-compose文件",
             "default_path": "docker-compose.yml"
         }
