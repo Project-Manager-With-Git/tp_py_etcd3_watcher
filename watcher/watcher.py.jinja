@@ -1,13 +1,12 @@
 from typing import Iterator, AsyncIterator
 from pyloggerhelper import log
-from etcd3.etcd3 import PutEvent, DeleteEvent
 from etcdproxy import EtcdProxy
 
 etcd = EtcdProxy()
 
 
 def handdler(events_iterator: Iterator) -> None:
-
+    from etcd3.events import PutEvent, DeleteEvent
     for event in events_iterator:
         try:
             if isinstance(event, PutEvent):
@@ -22,6 +21,7 @@ def handdler(events_iterator: Iterator) -> None:
             log.error("event watch error", e=e)
 
 async def aiohanddler(events_iterator: AsyncIterator) -> None:
+    from aetcd3.events import PutEvent, DeleteEvent
     async for event in events_iterator:
         try:
             if isinstance(event, PutEvent):
