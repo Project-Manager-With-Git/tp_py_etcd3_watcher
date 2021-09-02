@@ -41,7 +41,7 @@ class Application(EntryPoint):
         }
     }
 
-    def run_handdler()->None:
+    def run_handdler(self) -> None:
         try:
             handdler()
         except (KeyboardInterrupt, SystemExit):
@@ -51,7 +51,7 @@ class Application(EntryPoint):
         finally:
             etcd.close()
 
-    async run_aiohanddler() -> None:
+    async def run_aiohanddler(self) -> None:
         try:
             await aiohanddler()
         except (KeyboardInterrupt, SystemExit):
@@ -71,6 +71,6 @@ class Application(EntryPoint):
         etcd.initialize_from_url(url=send_etcd_url)
         if etcd.aio:
             import asyncio
-            asyncio.run(run_aiohanddler())
+            asyncio.run(self.run_aiohanddler())
         else:
-            run_handdler()
+            self.run_handdler()
