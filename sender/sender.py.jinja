@@ -11,7 +11,7 @@ def handdler() -> None:
         etcd.put('/test/foo', f'bar{i}')
         log.info("send msg", value=f'bar{i}', key="foo")
         time.sleep(1)
-    etcd.delete_range("/test", prefix=True)
+    etcd.delete_prefix("/test")
 
 
 async def aiohanddler() -> None:
@@ -19,4 +19,5 @@ async def aiohanddler() -> None:
         await etcd.put('/test/foo', f'bar{i}')
         log.info("send msg", value=f'bar{i}', key="foo")
         await asyncio.sleep(1)
-    await etcd.delete_range("/test", prefix=True)
+    await etcd.delete_prefix("/test")
+

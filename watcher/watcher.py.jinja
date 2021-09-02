@@ -1,5 +1,6 @@
 from typing import Iterator, AsyncIterator
 from pyloggerhelper import log
+
 from etcdproxy import EtcdProxy
 
 etcd = EtcdProxy()
@@ -10,27 +11,28 @@ def handdler(events_iterator: Iterator) -> None:
     for event in events_iterator:
         try:
             if isinstance(event, PutEvent):
-                key = event.kv.key.decode("utf-8")
-                value = event.kv.value.decode("utf-8")
+                key = event.key.decode("utf-8")
+                value = event._event.kv.value.decode("utf-8")
                 log.info("get put event", key=key, value=value)
 
             elif isinstance(event, DeleteEvent):
-                key = event.kv.key.decode("utf-8")
+                key = event.key.decode("utf-8")
                 log.info("get delete event", key=key)
         except Exception as e:
             log.error("event watch error", e=e)
+
 
 async def aiohanddler(events_iterator: AsyncIterator) -> None:
     from aetcd3.events import PutEvent, DeleteEvent
     async for event in events_iterator:
         try:
             if isinstance(event, PutEvent):
-                key = event.kv.key.decode("utf-8")
-                value = event.kv.value.decode("utf-8")
+                key = event.key.decode("utf-8")
+                value = event._event.kv.value.decode("utf-8")
                 log.info("get put event", key=key, value=value)
 
             elif isinstance(event, DeleteEvent):
-                key = event.kv.key.decode("utf-8")
+                key = event.key.decode("utf-8")
                 log.info("get delete event", key=key)
         except Exception as e:
             log.error("event watch error", e=e)

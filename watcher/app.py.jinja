@@ -14,6 +14,7 @@ class Application(EntryPoint):
             "log_level",
             "watch_etcd_url",
             "watch_etcd_key",
+            "watch_etcd_prefix"
         ],
         "properties": {
             "app_version": {
@@ -33,7 +34,7 @@ class Application(EntryPoint):
                 "title": "l",
                 "description": "log等级",
                 "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
-                "default": "DEBUG"
+                "default": "INFO"
             },
             "watch_etcd_url": {
                 "type": "string",
@@ -51,7 +52,7 @@ class Application(EntryPoint):
                 "title": "p",
                 "description": "监听的键是一个前缀而不是以一个完整的键",
                 "default": False
-            },
+            }
         }
     }
     def run_handdler(self, watch_etcd_prefix:bool, watch_etcd_key:str) -> None:
