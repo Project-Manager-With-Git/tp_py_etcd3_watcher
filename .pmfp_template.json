@@ -1,13 +1,13 @@
 {
     "language": "py",
     "description": "python监听etcdv3的项目模板,注意这个模板只能监听单个节点,且使用gRPC-JSON-Gateway而非grpc",
-    "author": "hsz12",
+    "author": "hsz",
     "template_type": "watcher",
     "requires": [
         "pyproxypattern >= 0.0.1",
         "schema_entry >= 0.1.5",
         "pyloggerhelper >= 0.0.2",
-        "etcd3-py >= 0.1.6"
+        "etcdproxy >= 0.0.1"
     ],
     "test_requires": [
         "coverage >= 5.5",
